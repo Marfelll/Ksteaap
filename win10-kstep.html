@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kstep — prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,900&display=swap');
+
+  :root{
+    --bg:#FAFAF7;
+    --ink:#15171B;
+    --muted:#8B8D92;
+    --faint:#B7B8BC;
+    --line:#E4E2DC;
+    --accent:#33456E;
+    --accent-tint:#EBEEF3;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    background:#EDEAE1;
+    font-family:'Archivo', sans-serif;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:36px 16px 60px 16px;
+  }
+
+  /* ---------- mode switch ---------- */
+  .mode-switch{display:flex; gap:22px; margin-bottom:34px;}
+  .mode-btn{
+    border:none; background:none; cursor:pointer;
+    font-family:'Archivo', sans-serif; font-size:13px; font-weight:600;
+    color:var(--faint); padding:6px 2px; position:relative;
+  }
+  .mode-btn.active{color:var(--ink);}
+  .mode-btn.active::after{
+    content:''; position:absolute; left:0; right:0; bottom:-6px; height:2px; background:var(--accent);
+  }
+
+  .stage{width:100%; display:flex; justify-content:center;}
+  .stage-block{display:none;}
+  .stage-block.active{display:flex; justify-content:center;}
+
+  a{color:inherit; text-decoration:none;}
+
+  /* =======================================================
+     SHARED CONTENT STYLES
+     ======================================================= */
+  .word{font-size:19px; font-weight:700; letter-spacing:-0.01em;}
+  .word .k{color:var(--accent);}
+
+  .name-xl{font-size:24px; font-weight:700; letter-spacing:-0.01em;}
+  .role-line{font-size:13px; color:var(--muted); margin-top:5px;}
+  .loc-line{font-size:12.5px; color:var(--muted); margin-top:9px;}
+
+  .id-box{
+    width:52px; height:52px;
+    border:1px solid var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:700;
+    flex:0 0 auto;
+  }
+
+  .hr{height:1px; background:var(--line); border:none; width:100%;}
+
+  .progress-row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px;}
+  .progress-row .lbl{font-size:12.5px; color:var(--muted);}
+  .progress-row .val{font-size:12.5px; font-weight:700; color:var(--accent);}
+  .progress-track{height:2px; background:var(--line); position:relative;}
+  .progress-fill{height:2px; background:var(--accent); width:82%;}
+  .progress-note{font-size:11.5px; color:var(--muted); margin-top:9px;}
+
+  .stat-list{display:flex;}
+  .stat-item{flex:1; padding:0 14px;}
+  .stat-item:first-child{padding-left:0;}
+  .stat-item + .stat-item{border-left:1px solid var(--line);}
+  .stat-item .num{font-size:22px; font-weight:700;}
+  .stat-item .lbl{font-size:11px; color:var(--muted); margin-top:5px; line-height:1.35;}
+
+  .section-lbl{font-size:11.5px; color:var(--muted); margin-bottom:10px;}
+  .skills-text{font-size:13.5px; line-height:1.75;}
+
+  .activity-row{display:flex; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--line);}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-row .txt{font-size:13px; line-height:1.5;}
+  .activity-row .txt b{font-weight:700;}
+  .activity-row .time{font-size:11.5px; color:var(--faint); white-space:nowrap; padding-top:1px;}
+
+  .pf-row{padding:20px 0; border-bottom:1px solid var(--line); display:flex; gap:16px;}
+  .pf-row:first-child{padding-top:0;}
+  .pf-row:last-child{border-bottom:none;}
+  .pf-thumb{
+    width:78px; height:78px; flex:0 0 auto;
+    border:1px solid var(--line);
+    background:
+      repeating-linear-gradient(135deg, var(--ink) 0, var(--ink) 1px, transparent 1px, transparent 9px);
+    background-color:#F1EFE9;
+    opacity:0.92;
+  }
+  .pf-info{flex:1; min-width:0;}
+  .pf-cat{font-size:11px; color:var(--muted); margin-bottom:5px;}
+  .pf-title{font-size:15px; font-weight:700; margin-bottom:5px;}
+  .pf-meta{font-size:12.5px; color:var(--muted); line-height:1.5;}
+  .pf-foot{display:flex; justify-content:space-between; align-items:baseline; margin-top:11px;}
+  .pf-views{font-size:11.5px; color:var(--faint);}
+  .pf-link{font-size:12px; font-weight:700; border-bottom:1px solid var(--ink); padding-bottom:1px;}
+
+  .match-line{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:16px; margin-bottom:6px; border-bottom:1px solid var(--line);}
+  .match-line .txt{font-size:12.5px; color:var(--muted);}
+  .match-line .txt b{color:var(--ink); font-weight:700;}
+
+  .co-row{display:flex; gap:15px; padding:18px 0; border-bottom:1px solid var(--line); align-items:flex-start;}
+  .co-row:last-child{border-bottom:none;}
+  .co-id{width:44px; height:44px; border:1px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:0 0 auto;}
+  .co-info{flex:1;}
+  .co-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .co-name{font-size:14.5px; font-weight:700;}
+  .co-match{font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap;}
+  .co-role{font-size:12.5px; color:var(--muted); margin-top:3px;}
+  .co-tags{font-size:11.5px; color:var(--faint); margin-top:7px;}
+
+  /* =======================================================
+     MOBILE
+     ======================================================= */
+  .phone{
+    width:390px; height:844px;
+    background:var(--bg);
+    border:10px solid #101114;
+    border-radius:44px;
+    box-shadow:0 30px 60px -20px rgba(15,15,15,0.4);
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+  }
+  .notch{position:absolute; top:9px; left:50%; transform:translateX(-50%); width:110px; height:24px; background:#101114; border-radius:16px; z-index:50;}
+
+  .statusbar{height:50px; flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between; padding:0 24px 8px 24px; font-size:13px; font-weight:700;}
+  .statusbar .icons{display:flex; gap:5px; align-items:center;}
+
+  .app-header{flex:0 0 auto; padding:8px 22px 18px 22px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line);}
+
+  .m-screen{flex:1; overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none;}
+  .m-screen::-webkit-scrollbar{display:none;}
+
+  .m-view{display:none; padding:24px 22px 40px 22px; animation:fade .25s ease;}
+  .m-view.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);}}
+
+  .id-box{margin-bottom:16px;}
+  .m-block{margin-bottom:26px;}
+
+  .m-tabbar{flex:0 0 auto; display:flex; border-top:1px solid var(--line); padding:16px 22px 26px 22px;}
+  .m-tab{flex:1; text-align:left; background:none; border:none; font-family:'Archivo', sans-serif; cursor:pointer;}
+  .m-tab .n{display:block; font-size:10.5px; color:var(--faint); margin-bottom:3px;}
+  .m-tab .l{display:block; font-size:12.5px; font-weight:600; color:var(--muted);}
+  .m-tab.active .n{color:var(--accent);}
+  .m-tab.active .l{color:var(--ink);}
+
+  /* =======================================================
+     DESKTOP
+     ======================================================= */
+  .browser{
+    width:1080px; max-width:94vw; height:660px;
+    background:var(--bg);
+    box-shadow:0 40px 70px -25px rgba(15,15,15,0.35);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  .browser-bar{height:42px; flex:0 0 auto; display:flex; align-items:center; gap:16px; padding:0 18px; border-bottom:1px solid var(--line);}
+  .traffic{display:flex; gap:7px;}
+  .traffic span{width:9px; height:9px; border-radius:50%; border:1px solid var(--faint); display:block;}
+  .url-pill{flex:1; max-width:280px; margin:0 auto; font-size:11.5px; color:var(--muted); text-align:center;}
+
+  .d-body{flex:1; display:flex; overflow:hidden;}
+
+  .d-sidebar{width:230px; flex:0 0 auto; border-right:1px solid var(--line); padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between;}
+  .d-nav{display:flex; flex-direction:column; margin-top:40px;}
+  .d-nav-item{
+    display:flex; align-items:baseline; gap:12px;
+    padding:14px 0; border-top:1px solid var(--line);
+    background:none; border-left:none; border-right:none; border-bottom:none;
+    cursor:pointer; text-align:left; width:100%;
+    font-family:'Archivo', sans-serif;
+  }
+  .d-nav:last-of-type .d-nav-item:last-child{border-bottom:1px solid var(--line);}
+  .d-nav-item .n{font-size:11px; color:var(--faint); font-weight:700; width:16px;}
+  .d-nav-item .l{font-size:13.5px; color:var(--muted); font-weight:600;}
+  .d-nav-item.active .n{color:var(--accent);}
+  .d-nav-item.active .l{color:var(--ink);}
+
+  .d-user-mini{display:flex; gap:11px; align-items:center; padding-top:22px; border-top:1px solid var(--line);}
+  .d-user-mini .id-box{width:38px; height:38px; font-size:12px; margin-bottom:0;}
+  .d-user-mini .u-name{font-size:12.5px; font-weight:700;}
+  .d-user-mini .u-role{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  .d-main{flex:1; overflow-y:auto; padding:40px 48px;}
+  .d-main::-webkit-scrollbar{width:8px;}
+  .d-main::-webkit-scrollbar-thumb{background:var(--line);}
+
+  .d-view{display:none; animation:fade .25s ease;}
+  .d-view.active{display:block;}
+
+  .d-top{display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:34px; padding-bottom:20px; border-bottom:1px solid var(--line);}
+  .d-h1{font-size:26px; font-weight:700; letter-spacing:-0.01em;}
+  .d-h1-sub{font-size:13px; color:var(--muted); margin-top:6px;}
+  .d-new{font-size:12.5px; font-weight:700; border-bottom:1px solid var(--ink); padding-bottom:2px; cursor:pointer;}
+
+  .d-profile-grid{display:grid; grid-template-columns:1fr 280px; gap:50px;}
+  .d-col-right{border-left:1px solid var(--line); padding-left:36px;}
+
+  .d-pf-list{display:flex; flex-direction:column;}
+  .d-companies-grid{display:grid; grid-template-columns:1fr 240px; gap:50px;}
+</style>
+</head>
+<body>
+
+<div class="mode-switch">
+  <button class="mode-btn active" data-mode="mobile">Mobile</button>
+  <button class="mode-btn" data-mode="desktop">Desktop</button>
+</div>
+
+<div class="stage">
+
+  <!-- =========================================================
+       MOBILE
+       ========================================================= -->
+  <div class="stage-block active" id="stage-mobile">
+    <div class="phone">
+      <div class="notch"></div>
+
+      <div class="statusbar">
+        <span>9:41</span>
+        <div class="icons">
+          <svg width="15" height="11" viewBox="0 0 16 12" fill="none"><path d="M1 4c3.5-3.2 10.5-3.2 14 0M3.3 6.6c2.3-2 7-2 9.3 0M5.7 9.1c1.2-1 3.4-1 4.6 0" stroke="#15171B" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <svg width="21" height="10" viewBox="0 0 22 11" fill="none"><rect x="1" y="1" width="18" height="9" rx="2" stroke="#15171B" stroke-width="1.1"/><rect x="2.5" y="2.5" width="13" height="6" rx="0.9" fill="#15171B"/><rect x="20" y="3.7" width="1.4" height="3.6" rx="0.6" fill="#15171B"/></svg>
+        </div>
+      </div>
+
+      <div class="app-header">
+        <div class="word">K<span class="k">step</span></div>
+      </div>
+
+      <div class="m-screen">
+
+        <!-- PROFILE -->
+        <section class="m-view active" id="m-profile">
+          <div class="id-box">AM</div>
+          <div class="name-xl">Alex Miller</div>
+          <div class="role-line">Product Designer, Mid-level</div>
+          <div class="loc-line">Recife, Brazil, open to remote</div>
+
+          <div class="m-block" style="margin-top:30px;">
+            <div class="progress-row"><span class="lbl">Profile strength</span><span class="val">82%</span></div>
+            <div class="progress-track"><div class="progress-fill"></div></div>
+            <div class="progress-note">Add one more project to reach 90%.</div>
+          </div>
+
+          <hr class="hr">
+
+          <div class="m-block" style="padding-top:22px;">
+            <div class="stat-list">
+              <div class="stat-item"><div class="num">12</div><div class="lbl">active applications</div></div>
+              <div class="stat-item"><div class="num">34</div><div class="lbl">profile views</div></div>
+              <div class="stat-item"><div class="num">4</div><div class="lbl">interested companies</div></div>
+            </div>
+          </div>
+
+          <hr class="hr">
+
+          <div class="m-block" style="padding-top:22px;">
+            <div class="section-lbl">Skills</div>
+            <div class="skills-text">Product design, User research, Figma, Design systems, Prototyping</div>
+          </div>
+
+          <div class="m-block">
+            <div class="section-lbl">Recent activity</div>
+            <div class="activity-row"><div class="txt"><b>Verbena Studio</b> viewed your portfolio</div><div class="time">2h</div></div>
+            <div class="activity-row"><div class="txt">Application at <b>Nortech</b> moved to interview</div><div class="time">1d</div></div>
+            <div class="activity-row"><div class="txt">You added <b>“Sotave Rebrand”</b></div><div class="time">3d</div></div>
+          </div>
+        </section>
+
+        <!-- PORTFOLIO -->
+        <section class="m-view" id="m-portfolio">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <div class="name-xl" style="font-size:19px;">Portfolio</div>
+            <div class="pf-link" style="border-bottom:1px solid var(--ink);">Add project</div>
+          </div>
+          <div class="progress-note" style="margin-bottom:8px;">What hiring teams see first.</div>
+
+          <div class="d-pf-list">
+            <div class="pf-row">
+              <div class="pf-thumb"></div>
+              <div class="pf-info">
+                <div class="pf-cat">Brand identity</div>
+                <div class="pf-title">Sotave Rebrand</div>
+                <div class="pf-meta">Brand system for a regional coffee shop chain.</div>
+                <div class="pf-foot"><span class="pf-views">86 views</span><span class="pf-link">View</span></div>
+              </div>
+            </div>
+            <div class="pf-row">
+              <div class="pf-thumb"></div>
+              <div class="pf-info">
+                <div class="pf-cat">Digital product</div>
+                <div class="pf-title">Trilho Logistics App</div>
+                <div class="pf-meta">Redesign of the driver tracking flow.</div>
+                <div class="pf-foot"><span class="pf-views">142 views</span><span class="pf-link">View</span></div>
+              </div>
+            </div>
+            <div class="pf-row">
+              <div class="pf-thumb"></div>
+              <div class="pf-info">
+                <div class="pf-cat">Research</div>
+                <div class="pf-title">Maré Bank Onboarding</div>
+                <div class="pf-meta">Usability study and a new signup journey.</div>
+                <div class="pf-foot"><span class="pf-views">59 views</span><span class="pf-link">View</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- COMPANIES -->
+        <section class="m-view" id="m-companies">
+          <div class="name-xl" style="font-size:19px; margin-bottom:16px;">Companies for you</div>
+          <div class="match-line"><span class="txt"><b>4 companies</b> match your portfolio this week</span></div>
+
+          <div class="co-row">
+            <div class="co-id">EV</div>
+            <div class="co-info">
+              <div class="co-top"><span class="co-name">Verbena Studio</span><span class="co-match">92%</span></div>
+              <div class="co-role">Mid-level Product Designer</div>
+              <div class="co-tags">Remote, Full-time, Design</div>
+            </div>
+          </div>
+          <div class="co-row">
+            <div class="co-id">NT</div>
+            <div class="co-info">
+              <div class="co-top"><span class="co-name">Nortech</span><span class="co-match">87%</span></div>
+              <div class="co-role">Senior UX/UI Designer</div>
+              <div class="co-tags">Hybrid, Recife, Contract</div>
+            </div>
+          </div>
+          <div class="co-row">
+            <div class="co-id">MR</div>
+            <div class="co-info">
+              <div class="co-top"><span class="co-name">Maré Bank</span><span class="co-match">81%</span></div>
+              <div class="co-role">Research Designer</div>
+              <div class="co-tags">Remote, Full-time</div>
+            </div>
+          </div>
+          <div class="co-row">
+            <div class="co-id">TR</div>
+            <div class="co-info">
+              <div class="co-top"><span class="co-name">Trilho Log</span><span class="co-match">76%</span></div>
+              <div class="co-role">Mid-level Product Designer</div>
+              <div class="co-tags">On-site, Olinda, Full-time</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="m-tabbar">
+        <button class="m-tab active" data-group="mobile" data-view="m-profile"><span class="n">01</span><span class="l">Profile</span></button>
+        <button class="m-tab" data-group="mobile" data-view="m-portfolio"><span class="n">02</span><span class="l">Portfolio</span></button>
+        <button class="m-tab" data-group="mobile" data-view="m-companies"><span class="n">03</span><span class="l">Companies</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DESKTOP
+       ========================================================= -->
+  <div class="stage-block" id="stage-desktop">
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="url-pill">kstep.app/profile</div>
+      </div>
+
+      <div class="d-body">
+        <div class="d-sidebar">
+          <div>
+            <div class="word">K<span class="k">step</span></div>
+            <div class="d-nav">
+              <button class="d-nav-item active" data-group="desktop" data-view="d-profile"><span class="n">01</span><span class="l">Profile</span></button>
+              <button class="d-nav-item" data-group="desktop" data-view="d-portfolio"><span class="n">02</span><span class="l">Portfolio</span></button>
+              <button class="d-nav-item" data-group="desktop" data-view="d-companies"><span class="n">03</span><span class="l">Companies</span></button>
+            </div>
+          </div>
+          <div class="d-user-mini">
+            <div class="id-box">AM</div>
+            <div><div class="u-name">Alex Miller</div><div class="u-role">Product Designer</div></div>
+          </div>
+        </div>
+
+        <div class="d-main">
+
+          <!-- PROFILE -->
+          <section class="d-view active" id="d-profile">
+            <div class="d-top">
+              <div>
+                <div class="d-h1">Welcome back, Alex</div>
+                <div class="d-h1-sub">Here's how your profile is performing this week.</div>
+              </div>
+            </div>
+
+            <div class="d-profile-grid">
+              <div>
+                <div class="stat-list" style="margin-bottom:30px;">
+                  <div class="stat-item" style="padding-left:0;"><div class="num" style="font-size:26px;">12</div><div class="lbl">active applications</div></div>
+                  <div class="stat-item"><div class="num" style="font-size:26px;">34</div><div class="lbl">profile views</div></div>
+                  <div class="stat-item"><div class="num" style="font-size:26px;">4</div><div class="lbl">interested companies</div></div>
+                </div>
+
+                <div class="section-lbl">Skills</div>
+                <div class="skills-text" style="margin-bottom:34px;">Product design, User research, Figma, Design systems, Prototyping</div>
+
+                <div class="section-lbl">Recent activity</div>
+                <div>
+                  <div class="activity-row"><div class="txt"><b>Verbena Studio</b> viewed your portfolio</div><div class="time">2 hours ago</div></div>
+                  <div class="activity-row"><div class="txt">Application at <b>Nortech</b> moved to interview</div><div class="time">Yesterday</div></div>
+                  <div class="activity-row"><div class="txt">You added <b>“Sotave Rebrand”</b></div><div class="time">3 days ago</div></div>
+                </div>
+              </div>
+
+              <div class="d-col-right">
+                <div class="id-box" style="width:60px; height:60px; font-size:17px;">AM</div>
+                <div class="name-xl" style="margin-top:16px;">Alex Miller</div>
+                <div class="role-line">Product Designer, Mid-level</div>
+                <div class="loc-line" style="margin-bottom:26px;">Recife, Brazil, open to remote</div>
+
+                <div class="progress-row"><span class="lbl">Profile strength</span><span class="val">82%</span></div>
+                <div class="progress-track"><div class="progress-fill"></div></div>
+                <div class="progress-note">Add one more project to reach 90%.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- PORTFOLIO -->
+          <section class="d-view" id="d-portfolio">
+            <div class="d-top">
+              <div>
+                <div class="d-h1">Portfolio</div>
+                <div class="d-h1-sub">What hiring teams see first.</div>
+              </div>
+              <div class="d-new">+ New project</div>
+            </div>
+
+            <div class="d-pf-list">
+              <div class="pf-row">
+                <div class="pf-thumb" style="width:150px; height:100px;"></div>
+                <div class="pf-info">
+                  <div class="pf-cat">Brand identity</div>
+                  <div class="pf-title">Sotave Rebrand</div>
+                  <div class="pf-meta">Brand system for a regional coffee shop chain.</div>
+                  <div class="pf-foot"><span class="pf-views">86 views</span><span class="pf-link">View project</span></div>
+                </div>
+              </div>
+              <div class="pf-row">
+                <div class="pf-thumb" style="width:150px; height:100px;"></div>
+                <div class="pf-info">
+                  <div class="pf-cat">Digital product</div>
+                  <div class="pf-title">Trilho Logistics App</div>
+                  <div class="pf-meta">Redesign of the driver tracking flow.</div>
+                  <div class="pf-foot"><span class="pf-views">142 views</span><span class="pf-link">View project</span></div>
+                </div>
+              </div>
+              <div class="pf-row">
+                <div class="pf-thumb" style="width:150px; height:100px;"></div>
+                <div class="pf-info">
+                  <div class="pf-cat">Research</div>
+                  <div class="pf-title">Maré Bank Onboarding</div>
+                  <div class="pf-meta">Usability study and a new signup journey.</div>
+                  <div class="pf-foot"><span class="pf-views">59 views</span><span class="pf-link">View project</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- COMPANIES -->
+          <section class="d-view" id="d-companies">
+            <div class="d-top">
+              <div>
+                <div class="d-h1">Companies for you</div>
+                <div class="d-h1-sub">Matched from your skills and portfolio.</div>
+              </div>
+            </div>
+
+            <div class="d-companies-grid">
+              <div>
+                <div class="co-row">
+                  <div class="co-id">EV</div>
+                  <div class="co-info">
+                    <div class="co-top"><span class="co-name">Verbena Studio</span><span class="co-match">92% match</span></div>
+                    <div class="co-role">Mid-level Product Designer</div>
+                    <div class="co-tags">Remote, Full-time, Design</div>
+                  </div>
+                </div>
+                <div class="co-row">
+                  <div class="co-id">NT</div>
+                  <div class="co-info">
+                    <div class="co-top"><span class="co-name">Nortech</span><span class="co-match">87% match</span></div>
+                    <div class="co-role">Senior UX/UI Designer</div>
+                    <div class="co-tags">Hybrid, Recife, Contract</div>
+                  </div>
+                </div>
+                <div class="co-row">
+                  <div class="co-id">MR</div>
+                  <div class="co-info">
+                    <div class="co-top"><span class="co-name">Maré Bank</span><span class="co-match">81% match</span></div>
+                    <div class="co-role">Research Designer</div>
+                    <div class="co-tags">Remote, Full-time</div>
+                  </div>
+                </div>
+                <div class="co-row">
+                  <div class="co-id">TR</div>
+                  <div class="co-info">
+                    <div class="co-top"><span class="co-name">Trilho Log</span><span class="co-match">76% match</span></div>
+                    <div class="co-role">Mid-level Product Designer</div>
+                    <div class="co-tags">On-site, Olinda, Full-time</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="section-lbl">This week</div>
+                <div class="name-xl" style="font-size:34px; margin-bottom:8px;">4</div>
+                <div class="progress-note">new companies matched your portfolio and recent skills.</div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.mode-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.mode-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.stage-block').forEach(function(s){ s.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('stage-' + btn.dataset.mode).classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('[data-group="mobile"]').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('[data-group="mobile"]').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('#stage-mobile .m-view').forEach(function(v){ v.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.view).classList.add('active');
+      document.querySelector('#stage-mobile .m-screen').scrollTop = 0;
+    });
+  });
+
+  document.querySelectorAll('[data-group="desktop"]').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.querySelectorAll('[data-group="desktop"]').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('#stage-desktop .d-view').forEach(function(v){ v.classList.remove('active'); });
+      item.classList.add('active');
+      document.getElementById(item.dataset.view).classList.add('active');
+      document.querySelector('.d-main').scrollTop = 0;
+    });
+  });
+</script>
+
+</body>
+</html>
